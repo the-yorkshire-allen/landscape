@@ -126,7 +126,7 @@ Puppet::Type.type(:landscape_user).provide(:rest) do
                     end
 
     request = request_class.new(uri)
-    request['Authorization'] = "Bearer #{resource[:api_token]}"
+    request['Authorization'] = "Bearer #{auth_token}"
     request['Content-Type'] = 'application/json'
     request.body = JSON.generate(payload) if payload
 
@@ -153,5 +153,22 @@ Puppet::Type.type(:landscape_user).provide(:rest) do
     uri = URI.parse("#{base}#{prefix}#{path}")
     uri.query = URI.encode_www_form(query) if query && !query.empty?
     uri
+  end
+
+  def auth_token
+    token = resource[:api_token]
+    return token unless token.nil? || token.to_s.strip.empty?
+
+    token_file = resource[:api_token_file]
+    raise Puppet::Error, 'No api_token or api_token_file was provided' if token_file.nil? || token_file.to_s.empty?
+
+    unless File.file?(token_file)
+      raise Puppet::Error, "api_token_file does not exist: #{token_file}"
+    end
+
+    file_token = File.read(token_file).strip
+    raise Puppet::Error, "api_token_file is empty: #{token_file}" if file_token.empty?
+
+    file_token
   end
 end

@@ -32,10 +32,16 @@ Puppet::Type.newtype(:landscape_computer) do
   newparam(:api_token) do
     desc 'Bearer token used to authenticate to the Landscape API.'
 
-    isrequired
-
     validate do |value|
       raise ArgumentError, 'api_token must not be empty' if value.to_s.strip.empty?
+    end
+  end
+
+  newparam(:api_token_file) do
+    desc 'Absolute path to a file containing a bearer token used to authenticate to the Landscape API.'
+
+    validate do |value|
+      raise ArgumentError, 'api_token_file must be an absolute path' unless value.start_with?('/')
     end
   end
 
@@ -43,5 +49,14 @@ Puppet::Type.newtype(:landscape_computer) do
     desc 'API prefix path. Default is /api/v2.'
 
     defaultto '/api/v2'
+  end
+
+  validate do
+    has_inline_token = !self[:api_token].nil? && !self[:api_token].to_s.strip.empty?
+    has_token_file = !self[:api_token_file].nil? && !self[:api_token_file].to_s.strip.empty?
+
+    unless has_inline_token || has_token_file
+      raise ArgumentError, 'One of api_token or api_token_file must be provided'
+    end
   end
 end

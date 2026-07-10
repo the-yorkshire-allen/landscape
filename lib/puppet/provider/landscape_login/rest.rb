@@ -3,6 +3,7 @@
 require 'json'
 require 'net/http'
 require 'uri'
+require 'fileutils'
 
 Puppet::Type.type(:landscape_login).provide(:rest) do
   desc 'Validate authentication against Landscape login endpoints.'
@@ -10,13 +11,15 @@ Puppet::Type.type(:landscape_login).provide(:rest) do
   mk_resource_methods
 
   def exists?
-    authenticate!
+    response = authenticate!
+    persist_token(response['token'])
     @property_hash = { ensure: :present }
     true
   end
 
   def create
-    authenticate!
+    response = authenticate!
+    persist_token(response['token'])
     @property_hash = { ensure: :present }
   end
 
@@ -25,6 +28,18 @@ Puppet::Type.type(:landscape_login).provide(:rest) do
   end
 
   private
+
+  def persist_token(token)
+    path = resource[:token_file]
+    return if path.nil? || path.to_s.empty?
+
+    FileUtils.mkdir_p(File.dirname(path))
+    File.open(path, 'w', 0o600) do |file|
+      file.write("#{token}\n")
+    end
+  rescue StandardError => e
+    raise Puppet::Error, "Failed to write Landscape JWT to #{path}: #{e.message}"
+  end
 
   def authenticate!
     if resource[:access_key]

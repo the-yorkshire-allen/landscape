@@ -25,6 +25,14 @@ Puppet::Type.newtype(:landscape_login) do
     defaultto '/api/v2'
   end
 
+  newparam(:token_file) do
+    desc 'Optional absolute path where the JWT token will be written after successful login.'
+
+    validate do |value|
+      raise ArgumentError, 'token_file must be an absolute path' unless value.start_with?('/')
+    end
+  end
+
   newparam(:password) do
     desc 'Password for email/identity login.'
   end
